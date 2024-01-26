@@ -1,39 +1,41 @@
 const express = require("express");
 const dotenv = require("dotenv");
+const { OpenAIApi } = require("openai");
 
 const app = express();
-
 app.use(express.json());
 dotenv.config();
 
-const { Configuration, OpenAIApi } = require("openai");
+// Initialize OpenAI API
 
+const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
 const openai = new OpenAIApi(configuration);
 
-async function chatGPT(prompt) {
-  const getResponse = await openai.createCompletion({
+async function runCompletion(prompt) {
+  const response = await openai.createCompletion({
     model: "text-davinci-003",
     prompt: prompt,
     max_tokens: 50,
   });
-  return getResponse;
+  return response;
 }
 
 app.post("/api/chatgpt", async (req, res) => {
   try {
-    const prompt = req.body.text;
-    const response = await chatGPT(prompt);
-    res.json({ data: response.data });
+    const { text } = req.body;
+    const completion = await runCompletion(text);
+    res.json({ data: completion.data });
   } catch (error) {
     if (error.response) {
       console.error(error.response.status, error.response.data);
-      res.status(error.response.status).json({ error: error.response.data });
+      res.status(error.response.status).json(error.response.data);
     } else {
-      console.error(error);
-      res.status(500).json({ error: error });
+      console.error("Server Error:", error);
+      res.status(500).json({ error: "Internal Server Error" });
     }
   }
 });
